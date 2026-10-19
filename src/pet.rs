@@ -1,4 +1,4 @@
-//! Ely, the icon's girl, peeking over the main window's top edge from a window of her own, or up from its bottom edge where no room lies above.
+//! Claude, in Ely's chibi style, peeking over the main window's top edge from a window of her own, or up from its bottom edge where no room lies above.
 
 mod look;
 #[cfg(target_os = "macos")]
@@ -55,7 +55,7 @@ enum Edge {
 /// The window she shows in, which the settings open and close.
 type Shown = Rc<RefCell<Option<WindowHandle<Pet>>>>;
 
-/// Ely in her window: she moves all the time, her acts follow the sessions' marks, and a press pets her.
+/// Claude in her window: she moves all the time, her acts follow the sessions' marks, and a press pets her.
 pub struct Pet {
     rig: Rc<Rig>,
     mood: Mood,
@@ -75,7 +75,7 @@ pub struct Pet {
     _watch: Vec<Subscription>,
 }
 
-/// Shows Ely over `main` while the settings want her.
+/// Shows Claude over `main` while the settings want her.
 pub fn follow(main: WindowHandle<Workspace>, cx: &mut App) {
     let shown: Shown = Rc::default();
     let sync = {
@@ -111,12 +111,12 @@ pub fn follow(main: WindowHandle<Workspace>, cx: &mut App) {
 /// Opens her window, logging why when it does not open.
 fn open_pet(main: WindowHandle<Workspace>, cx: &mut App) -> Option<WindowHandle<Pet>> {
     show(main, cx)
-        .inspect_err(|error| log::error!("pet: Ely does not show: {error:#}"))
+        .inspect_err(|error| log::error!("pet: Claude does not show: {error:#}"))
         .ok()
 }
 
 fn close(pet: WindowHandle<Pet>, why: &str, cx: &mut App) {
-    log::info!("pet: Ely goes, {why}");
+    log::info!("pet: Claude goes, {why}");
     if pet
         .update(cx, |_, window, _| window.remove_window())
         .is_err()
@@ -268,7 +268,7 @@ fn show(main: WindowHandle<Workspace>, cx: &mut App) -> anyhow::Result<WindowHan
     };
     let edge = format!("{edge:?}").to_lowercase();
     log::info!(
-        "pet: Ely peeks over the main window, {way}, on the pane's {edge} edge, feeling {start:?}"
+        "pet: Claude peeks over the main window, {way}, on the pane's {edge} edge, feeling {start:?}"
     );
     Ok(pet)
 }
@@ -324,14 +324,14 @@ fn wayland(_: &Window) -> bool {
 impl Pet {
     /// Takes up `mood` at `now`, its act beginning there, eased from where she is.
     fn feel(&mut self, mood: Mood, now: Instant) {
-        log::debug!("pet: Ely feels {mood:?}, was {:?}", self.mood);
+        log::debug!("pet: Claude feels {mood:?}, was {:?}", self.mood);
         (self.mood, self.since) = (mood, now);
         self.ease(now);
     }
 
     /// A press at `now`, which winks her, eased from where she is.
     fn press(&mut self, now: Instant) {
-        log::debug!("pet: Ely is pressed");
+        log::debug!("pet: Claude is pressed");
         self.petted = Some(now);
         self.ease(now);
     }
@@ -351,7 +351,7 @@ impl Pet {
             self.petted.map(since),
         );
         if pose.act != self.act {
-            log::debug!("pet: Ely goes from {:?} to {:?}", self.act, pose.act);
+            log::debug!("pet: Claude goes from {:?} to {:?}", self.act, pose.act);
             self.act = pose.act;
             self.ease(now);
         }
@@ -374,7 +374,7 @@ impl Pet {
         match glue.place(main) {
             Ok(edge) if edge != self.edge => {
                 let name = format!("{edge:?}").to_lowercase();
-                log::info!("pet: Ely moves to the pane's {name} edge");
+                log::info!("pet: Claude moves to the pane's {name} edge");
                 self.edge = edge;
             }
             Ok(_) => {}
@@ -386,7 +386,7 @@ impl Pet {
     fn shown(&mut self, visible: bool, main: &Window) {
         if let Some(glue) = &self.glue {
             match glue.shown(visible) {
-                Ok(()) => log::debug!("pet: Ely shows {visible} with the main window"),
+                Ok(()) => log::debug!("pet: Claude shows {visible} with the main window"),
                 Err(error) => log::error!("{error:#}"),
             }
         }

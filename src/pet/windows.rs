@@ -42,6 +42,8 @@ thread_local! {
 const PLACE: u32 = WM_APP;
 /// Her corner at a new DPI, posted so it follows the whole move that brought the change.
 const KEEP: u32 = WM_APP + 1;
+// Changing the frame sends bounds callbacks, so it must wait until gpui releases its app.
+const FRAME: u32 = WM_APP + 2;
 const _: () = assert!(
     size_of::<WPARAM>() == 8,
     "a place packs two i32 into a word"
@@ -68,10 +70,9 @@ impl Glue {
             let gpui = SetWindowLongPtrW(pet, GWLP_WNDPROC, inactive as *const () as isize);
             anyhow::ensure!(gpui != 0, "pet: her window's procedure does not read");
             GPUI.store(gpui, Ordering::Relaxed);
-            let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED;
             anyhow::ensure!(
-                SetWindowPos(pet, HWND_NOTOPMOST, 0, 0, 0, 0, flags) != 0,
-                "pet: her window keeps the topmost place or its frame"
+                PostMessageW(pet, FRAME, 0, 0) != 0,
+                "pet: her window's frame update does not post"
             );
         }
         Ok(Self { pet, main })
@@ -102,7 +103,7 @@ impl Glue {
         let corner = stand(main.rcClient, scale, pane, edge);
         let posted = unsafe { PostMessageW(self.pet, PLACE, pack(corner), 0) };
         anyhow::ensure!(posted != 0, "pet: her place does not post");
-        log::debug!("pet: Ely is to stand on {corner:?}, the pane's {edge:?} edge");
+        log::debug!("pet: Claude is to stand on {corner:?}, the pane's {edge:?} edge");
         Ok(edge)
     }
 }
@@ -149,6 +150,13 @@ unsafe extern "system" fn inactive(
     let gpui: WNDPROC = unsafe { std::mem::transmute(GPUI.load(Ordering::Relaxed)) };
     match message {
         WM_MOUSEACTIVATE => MA_NOACTIVATE as LRESULT,
+        FRAME => {
+            let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED;
+            if unsafe { SetWindowPos(window, HWND_NOTOPMOST, 0, 0, 0, 0, flags) } == 0 {
+                log::error!("pet: her window keeps the topmost place or its frame");
+            }
+            0
+        }
         PLACE => {
             let corner = unpack(wparam);
             CORNER.set(Some(corner));

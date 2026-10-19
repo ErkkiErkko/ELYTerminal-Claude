@@ -103,8 +103,8 @@ impl SettingsWindow {
         let section = section
             .row(SettingsRow::new("Copy on select").control(copy))
             .row(
-                SettingsRow::new("Ely")
-                    .description("Peeks over the window, her face as your sessions are")
+                SettingsRow::new("Claude")
+                    .description("Claude peeks over the window and reacts to your sessions")
                     .control(ely),
             );
         let keys = SettingsSection::new("Shortcuts")

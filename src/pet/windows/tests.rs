@@ -4,13 +4,17 @@ use gpui::{point, px, size};
 use windows_sys::{
     Win32::UI::WindowsAndMessaging::{
         CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, MSG,
-        PM_REMOVE, PeekMessageW, SendMessageW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+        PM_REMOVE, PeekMessageW, SendMessageW, WM_MOVE, WM_SIZE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
         WS_OVERLAPPEDWINDOW,
     },
     w,
 };
 
 use super::*;
+
+thread_local! {
+    static BOUNDS_NOTIFICATIONS: Cell<usize> = const { Cell::new(0) };
+}
 
 /// A hidden window of `style`, at the size Windows picks, as gpui asks for its windows.
 fn window(style: u32, extended: u32) -> HWND {
@@ -80,6 +84,9 @@ unsafe extern "system" fn standin(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    if matches!(message, WM_MOVE | WM_SIZE) {
+        BOUNDS_NOTIFICATIONS.set(BOUNDS_NOTIFICATIONS.get() + 1);
+    }
     if message == WM_DPICHANGED {
         let rect = unsafe { *(lparam as *const RECT) };
         let (width, height) = (rect.right - rect.left, rect.bottom - rect.top);
@@ -268,7 +275,9 @@ fn the_large_framed_popup_gpui_makes_stands_bare_in_her_box_on_an_edge_of_the_pa
         "framed as gpui makes it"
     );
     unsafe { SetWindowLongPtrW(pet, GWLP_WNDPROC, standin as *const () as isize) };
+    BOUNDS_NOTIFICATIONS.set(0);
     let glue = Glue::hold(pet, main).expect("held");
+    let synchronous_bounds = BOUNDS_NOTIFICATIONS.get();
     let work = work_area(main);
     move_main(main, (work.left + 200, work.top + 400));
     let pane = Bounds::new(point(px(0.), px(0.)), size(px(380.), px(280.)));
@@ -304,6 +313,15 @@ fn the_large_framed_popup_gpui_makes_stands_bare_in_her_box_on_an_edge_of_the_pa
         DestroyWindow(pet);
         DestroyWindow(main);
     }
+    assert_eq!(
+        synchronous_bounds, 0,
+        "initializing the popup must not reenter gpui's borrowed app through bounds callbacks"
+    );
+    assert_eq!(
+        her.dwExStyle & WS_EX_TOPMOST,
+        0,
+        "the queued frame update removes the popup's topmost flag"
+    );
     let (outer, inner) = (her.rcWindow, her.rcClient);
     let frame = (
         inner.left - outer.left,

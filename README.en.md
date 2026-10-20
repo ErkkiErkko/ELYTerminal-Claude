@@ -4,7 +4,7 @@
 
 <img src="assets/icons/elyterminal.svg" width="160" alt="A chibi Claude character holding a terminal">
 
-A Claude character customization of [ELYTerminal](https://git.zacharyzhang.com/Zacharyzhang-NY/ELYTerminal). It keeps the original chibi style and replaces the animated window companion and application icon with a feminine Claude design featuring long orange hair, amber eyes, flower ornaments, and black-and-ivory ribbons.
+A Claude character customization of [ELYTerminal](https://github.com/ELY-Open-Source/ELYTerminal). It keeps the original chibi style and replaces the animated window companion and application icon with a feminine Claude design featuring long orange hair, amber eyes, flower ornaments, and black-and-ivory ribbons.
 
 The terminal is built with Rust, GPUI, and Ely components. Sessions sit on the left, the terminal in the middle, and Git or Files on the right. Every setting has a control in the settings window.
 
@@ -20,7 +20,7 @@ Customized binaries are currently available for **Windows x64**:
 
 The release page also provides a source archive, a patch against upstream, and `SHA256SUMS.txt`. The portable ZIP includes the project and third-party licenses.
 
-This customization has been verified locally on Windows x64 with a Release build, 216 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
+This customization has been verified locally on Windows x64 with a Release build, 239 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
 
 The source retains macOS and Linux support, but this customization has not been verified on either platform and does not provide customized installers for them. Upstream installers still use the original Ely character.
 
@@ -32,6 +32,15 @@ The source retains macOS and Linux support, but this customization has not been 
 - **Application icon:** uses the same Claude design holding a terminal. The Windows executable embeds seven transparent icon sizes: 16, 24, 32, 48, 64, 128, and 256 pixels.
 - **Windows fix:** defers the companion window's frame refresh to prevent synchronous callbacks from causing a borrow error during initialization, with regression coverage.
 - **Settings compatibility:** the displayed name is Claude; the existing `ely` configuration key remains valid.
+
+## Updates in 0.1.7
+
+- **Draggable companion:** drag Claude along the window edge; her position is saved. Wayland applies the position after release. Her shirt and back hair now cover the edge throughout a hop, closing the gap beneath her.
+- **Scrolling and input:** adds a draggable history scrollbar and click-to-move on the shell's current input line, subject to the shell and its line editor.
+- **File drops:** dropping files on the terminal pastes paths escaped for the shell that started the session.
+- **Fonts and sessions:** configure an ordered list of fallback fonts; double-click a session name to rename it, or clear the name to restore the program's title.
+- **Windows:** includes the Windows 10 optimization that temporarily clears acrylic blur while moving or resizing, alongside the Claude initialization fix.
+- **Update checks:** check manually under Settings → Terminal, or automatically at startup and daily by default. Checks only this Claude repository's releases and understands `-claude.N` revisions. A newer release opens a download page; it does not replace the program automatically. Checks require `curl` on the system.
 
 ## Terminal features
 
@@ -139,7 +148,7 @@ If the configuration cannot be parsed or contains an out-of-range value, the app
 
 ## Upstream and license
 
-This customization is based on upstream `0.1.5`, commit `3759cf882553561d9dc4d10825f63b6b9c5d457e`. Upstream commit history and copyright notices are preserved.
+This customization is based on upstream `0.1.7`, commit `fe07813fdfa9fd600274066d9fcd88d5f5a3bcc0`. Upstream commit history and copyright notices are preserved.
 
 **This customization and its added code continue to use the MIT License.** See [LICENSE](LICENSE). Third-party code and resources retain their own licenses:
 

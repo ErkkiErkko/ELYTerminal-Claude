@@ -61,10 +61,10 @@ const fn part(name: &'static str, color: u32, frame: [f32; 4], bone: Bone, shape
 /// Every layer, back to front.
 #[rustfmt::skip]
 const PARTS: &[Part] = &[
-    part("hair-back", 0xCF784C, [117.0, 45.0, 278.0, 262.0], Bone::Head, r#"<path d="M256 46C192 46 142 90 136 158C131 214 126 262 118 306L394 306C386 262 381 214 376 158C370 90 320 46 256 46Z"/>"#),
+    part("hair-back", 0xCF784C, [117.0, 45.0, 278.0, 296.0], Bone::Head, r#"<path d="M256 46C192 46 142 90 136 158C131 214 126 262 118 306L118 340L394 340L394 306C386 262 381 214 376 158C370 90 320 46 256 46Z"/>"#),
     part("shade-back", 0xA95638, [193.0, 199.0, 126.0, 78.0], Bone::Head, r#"<path d="M194 200C198 238 214 262 230 276L282 276C298 262 314 238 318 200Z"/>"#),
     part("neck", 0xF7CDBE, [235.0, 221.0, 42.0, 50.0], Bone::Body, r#"<path d="M236 222L276 222L276 266C268 270 244 270 236 266Z"/>"#),
-    part("collar", 0xFFF4E3, [197.0, 239.0, 118.0, 46.0], Bone::Body, r#"<path d="M198 284Q208 264 232 258L232 245L240 250L247 240L256 248L265 240L272 250L280 245L280 258Q304 264 314 284Z"/>"#),
+    part("collar", 0xFFF4E3, [193.0, 239.0, 126.0, 102.0], Bone::Body, r#"<path d="M198 284Q208 264 232 258L232 245L240 250L247 240L256 248L265 240L272 250L280 245L280 258Q304 264 314 284L318 340L194 340Z"/>"#),
     part("collar-folds", 0xDFC9B4, [214.0, 250.0, 84.0, 35.0], Bone::Body, r#"<path fill="none" stroke="black" stroke-width="2" stroke-linejoin="round" d="M216 271L238 260L245 274L256 264L267 274L274 260L296 271M237 251L242 258M275 251L270 258"/>"#),
     part("bow", 0x302C2E, [226.0, 248.0, 60.0, 38.0], Bone::Body, r#"<path d="M256 264Q240 247 228 250L234 269L248 270L241 285L256 280L271 285L264 270L278 269L284 250Q272 247 256 264Z"/>"#),
     part("brooch-petals", 0xCF784C, [241.0, 250.0, 30.0, 30.0], Bone::Body, r#"<path transform="rotate(0 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(36 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(72 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(108 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(144 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(180 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(216 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(252 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(288 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/><path transform="rotate(324 256 265)" d="M256 262Q252 256.5 256 251Q260 256.5 256 262Z"/>"#),
@@ -275,6 +275,43 @@ mod tests {
                     && drawn.bottom() <= height,
                 "{}: {drawn:?} spills out of {width} by {height}",
                 part.name
+            );
+        }
+    }
+
+    #[test]
+    fn her_shirt_and_hair_run_below_the_edge_at_her_highest_hop() {
+        use super::super::look::{Mood, pose};
+        let moods = [
+            Mood::Calm,
+            Mood::Done,
+            Mood::Working,
+            Mood::Error,
+            Mood::Waiting,
+        ];
+        let mut highest = 0.0_f32;
+        for mood in moods {
+            for held in (0..130).map(|step| f64::from(step) * 0.02) {
+                for petted in [None]
+                    .into_iter()
+                    .chain((0..31).map(|step| Some(f64::from(step) * 0.02)))
+                {
+                    let pose = pose(mood, held, 10.0, petted);
+                    highest = highest.max(pose.lift + pose.bob);
+                }
+            }
+        }
+        assert!(
+            highest > 40.0,
+            "a press inside a hop lifts her {highest} units"
+        );
+        let edge = VIEW[1] + VIEW[3];
+        for name in ["collar", "hair-back"] {
+            let part = PARTS.iter().find(|part| part.name == name).expect(name);
+            let bottom = part.frame[1] + part.frame[3] - highest;
+            assert!(
+                bottom > edge,
+                "{name} ends at {bottom}, above the edge at {edge}"
             );
         }
     }

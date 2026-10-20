@@ -272,3 +272,61 @@ Each task gets at most three codex rounds. Each round: the commit, the verdict, 
 ## T54
 
 - Round 1, 0119776 and 15153b4 with v0.1.5 published: PASS. The reviewer found the bump only elyterminal's version; downloaded the three files anonymously, each matching the notes' SHA-256 and target/t54/anon byte for byte, and the tag's source archive the commit's 141 files; checked the disk image's ticket, strict signatures and Gatekeeper, the hardened arm64 app at 0.1.5 and macOS 11.0, the zip's GUI executable with its seven icon images, icon group 1, PerMonitorV2 manifest and no C runtime DLL, and the tarball's modes and glibc 2.35; found T51's and the failed glue's markers in all three binaries, T53's in the app and the monitors' in the tarball; and read CI run 1311 succeed on macOS, Ubuntu and Windows at 0119776 a minute before the release was published, and Release run 1312 on the signing runner. check.sh passed with 240 tests. Windows and Linux windows went unexercised.
+
+## T55
+
+- No review: the owner asked for 0.1.6 without one. Checked by scripts/check.sh (240 tests), Linux tests (247) and clippy, Windows gnu clippy, an xdotool drag under Xorg, a drag under Sway nested in Xorg, and the owner's own drags on macOS.
+
+## T56
+
+- No review: the owner asked for 0.1.6 without one. Checked by scripts/check.sh (243 tests), Linux tests (250) and clippy, Windows gnu clippy, and under Xorg's dummy screen the start's check, Check now, the switch, and a build named 0.1.4 that found 0.1.5 out and opened its page.
+
+## T58
+
+- No review: the owner asked for it at once, in 0.1.6, without one. Checked by scripts/check.sh (244 tests), Linux tests (251) and clippy, Windows gnu clippy, and under Xorg's dummy screen drags of the thumb through 500 lines, with mouse tracking on as well.
+
+## T57
+
+- No review: the owner asked for 0.1.6 without one. v0.1.6 published at 8a9941b once CI run 1342 passed on macOS, Ubuntu and Windows; its disk image from Release run 1343, notarized, its zip and tarball from their scripts on the owner's PC and its WSL; a first build at 9e185ea, held back for the scrollbar, was replaced on the draft and never published; each file downloaded back anonymously matches its SHA-256 in the notes.
+
+## T59
+
+- Round 1, 82cfe91: FAIL. fish 4.9 moves a code point per Left, so a counted click put `X` inside `é`; fish's redraw dropped the wrap flag of a long line, so a second click on its next row moved nothing; a press let go in another cell still moved the cursor; a program that turned on mouse tracking while the button was down still got arrows. Fixed in 0c55d41: OSC 133 A's `click_events`, which fish sends on its own, makes the click go to the shell as an SGR press, as kitty and Ghostty send it; the release must land in the press's cell, and the program must track no mouse at the release.
+- Round 2, 0c55d41: FAIL. The four findings of round 1 replayed fixed, and zsh, bash, the prompt jump and the shell tests held; but a click on fish's `$` went to fish as a press, and fish moved its cursor to the start, where T59 asks for clicks past the prompt. Fixed in e74ea74: the press goes only past the prompt's last cell before the cursor, and never on a prompt cell.
+- Round 3, e74ea74 and 9fa68b2: a first run found that fish's empty left prompt beside a right prompt carrying its own marks panicked in `click::press`, then stopped without a verdict when Codex's content filter cut it off; 9fa68b2 fixed the panic. A second run, at 9fa68b2: FAIL. Every earlier finding replayed fixed and the panic gone, but a prompt that prints nothing, fish's empty left prompt with a plain or no right prompt, left no cells to find the input by, so clicks on the typed line did nothing. The owner chose a fix and a fourth round over leaving it documented. Fixed in 84364ce: OSC 133 B stamps the line typed after a prompt with a link of its own, numbered by the commands ended, which every prompt drawn again on that line shares, so the input starts at its first typed cell where no prompt cell of its line comes before it.
+- Round 4, 84364ce: FAIL. Round 3's finding replayed fixed, every earlier one held, and the rewrite passed 5,291 split reads, 15 pty replays, Cmd-press in prompt, input and output, bash 3.2, find, select all and copy; but the newest typed line was taken by its place, lowest on the screen, so after `printf '\e[H'` fish's prompt at the top over older lines took no click. Fixed in 28d7615: the newest line is the one of the highest number, and a press goes no lower than its last row or the cursor's, where fish moved its cursor for a click on older text below. Round 4 was the last the owner allowed.
+- Round 5, 28d7615, which the owner allowed: PASS. fish's prompt drawn at the top over older lines took its click, `abcXdef`, and a click on the older text below did nothing; every earlier finding replayed fixed; zsh and bash arrows, the prompt jump, Cmd-press in prompt, input and output, bash 3.2, find, select all and copy held; 5,291 split reads and 15 pty replays of the rewrite matched; check.sh passed with 256 tests. Windows' win32-input-mode and Linux's native clicks went unexercised.
+
+## T66
+
+- Round 1, 545fb46: FAIL. On Windows a path went bare, or in double quotes when it held a space, so PowerShell expanded `$HOME` and `$(1+1)`, broke on `it's`, and ran `a;Write-Output(42)` as two statements, and cmd kept `&` live; and `^` went unescaped, so zsh with `extendedglob` read a dropped `a^b` as a glob and passed four files. zsh, bash and fish read 317 paths back exactly, controls and bad UTF-8 stopped the drop, and selection, click to move, mouse reports and the scrollbar held after a drop. Fixed in 887378a: a path stays literal for the shell the session started, by its name: backslashes for POSIX shells, `^` and `~` among them; single quotes with their quotes doubled for PowerShell; double quotes for cmd, which refuses a `%`.
+- Round 2, 887378a: FAIL. PowerShell read 384 hard names back exactly and a real pwsh session logged its quoting; zsh with `extendedglob`, bash and fish read 376; but cmd, from its docs and parsers, expands `!NAME!` inside quotes under `/v:on`, and `"C:\"` reads to a program as a quote, joining the next path. Fixed in 5660562: a `!` stops a cmd drop, and the backslashes ending a path are doubled; node, run from a cmd batch line on the owner's PC, received six hard paths exactly, `C:\` among them.
+- Round 3, 5660562: PASS. A `!` anywhere in a cmd drop stops it with no byte sent, and doubled trailing backslashes keep `C:\` and the next path apart under MSVCRT and UCRT parsing; 1,062 cmd paths, UNC and runs of up to 32 backslashes among them, kept their contents, order and bounds; zsh, zsh with `extendedglob`, bash and fish read 376 paths back exactly and PowerShell 384; check.sh passed with 261 tests. Windows' own cmd and ConPTY were checked only through the owner's PC run.
+
+## T60
+
+- Round 1, cb32f00: FAIL. On macOS the order, bold, italic, ligatures, icons, old files, refusals, add, change and cancel all held; but removing the row whose input held the focus left the removed family in it, and Enter saved it over the next family; and on Linux gpui's cosmic-text path carries the fallback a character took into the next while it covers it, so `क中` drew 中 in the second fallback. Fixed in 5f8ea89: a removal drops that row's input and the focus; the Linux path is gpui's, kept for its shaping clusters, and the owner chose to record it.
+- Round 2, 5f8ea89: FAIL. Round 1's removal case and removals first, middle, last, in sequence, then adds and cancels held, and the Linux record was true; but the pickers were keyed by place, so after a removal moved the inputs, the picker state of the second row, listening to the input now first, wrote PingFang SC into it at a blur, and Enter saved `[PingFang SC, PingFang SC]`. Fixed in 5d131e5: each picker is keyed by its input's entity.
+- Round 3, 5d131e5: PASS. Each picker keyed by its input kept round 2's case at `[Songti SC, PingFang SC]` through a removal, a focus cycle and Enter; drafts blurred after removals first, middle, last and among duplicates came back to the right family; a sequence of removals and adds through five focus cycles, and a cancel, re-add and removal through three, saved what the screen showed; a refused pick restored the saved list; check.sh passed with 262 tests. Windows and Linux windows went unexercised.
+
+## T61
+
+- No review: the owner closed it once it did not reproduce. On the owner's Windows 11 PC (26H2, 150%), with WeType and powershell.exe, 23 compositions put the candidate box at the caret: three on one line, then one on each of three lines below, fifteen committed and begun again at once, the caret stepping 4 cells each time, and eight under a status line redrawn every 100 ms with the cursor hidden; each caret the IME asked for matched the cursor. Microsoft Pinyin went untested.
+
+## T62
+
+- Round 1, 760f054: PASS. 24 poses rendered by gpui beside the build before, rest, breath, tilts, hops, a press in a hop, typing, a shake, the doze, waking and rising, kept her outline above the shoulders and joined the shirt and hair to the edge in every hop; 3,244,407 poses sampled, head bob, tilt and the rotated hair's corners counted, left the shirt 4.4 and the hair 1.3 units below the edge at her highest, 52.7 units; on macOS 48 snaps at the top and bottom edges and 52 through presses dispatched to her window kept her bottom row opaque; check.sh passed with 263 tests. Windows, X11 and Wayland went by their source.
+
+## T63
+
+- Round 1, 3085a94: FAIL. Presses, Enter, Escape, a blur by a press, other rows, closes, retitles, a full reset, long and Unicode names held, and Ely's `ListItem::editor` left other rows as they were; but leaving the app mid-rename blurred the field while the window's focus still pointed at it, the field went, and back in the app the terminal heard no key until pressed. Fixed in ca3809b: a field that closes while it still holds the focus gives it to the shown terminal; a press that took it elsewhere keeps it there.
+- Round 2, ca3809b: PASS. Back in the app after leaving it mid-rename, `a` reached the program with no press first; 18 scenarios held: Enter, Escape, a blur by a press, presses inside the field, switching and opening sessions, renaming two rows, closing the other session, the renamed one or by Cmd-W, Settings' fields and the Git summary keeping their focus, a triple press, a name of spaces and a later program title; check.sh passed with 263 tests. Windows and Linux windows went unexercised.
+
+## T65
+
+- Round 1, 1384ef5: FAIL. Moves and sizes, clear and opaque windows, changes at rest, blur turned off mid-move, per-window marks, destruction, the Windows 11 boundary and the structure layouts held in a replay against recorded Win32 calls; but blur turned on mid-move, which gpui sets as acrylic at once, kept acrylic for the rest of the move, since Windows sends `WM_ENTERSIZEMOVE` once. Fixed in 0a30760: a moving mark from `WM_ENTERSIZEMOVE` to `WM_EXITSIZEMOVE`, and a window blurred while it holds the mark takes the clear accent again.
+- Round 2, 0a30760: PASS. The build before failed its two mid-move cases and the fix passed them; 46,875 sequences of six actions from opaque, clear and blurred starts, settings, moves, ends, destruction and a second window among them, kept the accent, both marks and the frame refreshes as a model says; check.sh and the Windows type check passed. Windows 10 itself went untested.
+
+## T64
+
+- Round 1, 526e00a with v0.1.7 published on GitHub at f360143: PASS. GitHub's main and the tag name f360143, which CI run 39348049724 tested on macOS, Windows and Linux; the release is published, no prerelease, and `releases/latest` answers it; the three files downloaded anonymously match the notes' SHA-256; the disk image is stapled, notarized, arm64, 0.1.7 and macOS 11, beside Applications; the zip's executable a GUI program with its seven icon images and PerMonitorV2 manifest, byte for byte 0.1.6's, and no C runtime DLL; the tarball's three files and modes, glibc 2.35; each binary holds GitHub's `releases/latest`, no Gitea host, and the code of T59, T60, T62, T63 and T66, the Windows one T65's too; the notes match the work.

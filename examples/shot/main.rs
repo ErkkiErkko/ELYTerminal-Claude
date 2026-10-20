@@ -5,7 +5,11 @@ fn main() {
     use std::time::Duration;
 
     use ely_gpui_component::Assets;
-    use elyterminal::{app, settings::window::SettingsWindow, term::Launch};
+    use elyterminal::{
+        app,
+        settings::window::SettingsWindow,
+        term::{Launch, Quote},
+    };
     use gpui::AnyWindowHandle;
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("elyterminal=info"))
@@ -25,6 +29,7 @@ fn main() {
         cwd: std::env::current_dir().expect("a current folder"),
         env: Vec::new(),
         reports: false,
+        quote: Quote::Posix,
     };
     gpui_platform::application()
         .with_assets(Assets)
@@ -68,6 +73,20 @@ fn main() {
                                 .find(|window| window.downcast::<SettingsWindow>().is_some());
                             aim = settings.expect("a settings window");
                             capture::front(number(aim, cx)).expect("the window on screen");
+                        }
+                        spec if spec.starts_with("drop@") => {
+                            let paths =
+                                std::env::var("SHOT_DROP").expect("SHOT_DROP names the paths");
+                            let event = typing::drop(&spec[5..], &paths).expect("a drop");
+                            // A drag moves over frames before it lands.
+                            for step in event {
+                                aim.update(cx, |_, window, cx| window.dispatch_event(step, cx))
+                                    .expect("the window lives");
+                                cx.background_executor()
+                                    .timer(Duration::from_millis(120))
+                                    .await;
+                            }
+                            log::info!("shot: dropped {paths:?} at {}", &spec[5..]);
                         }
                         spec => typing::post(spec, number(aim, cx)).expect("a key event"),
                     }

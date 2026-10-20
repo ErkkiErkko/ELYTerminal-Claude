@@ -1,5 +1,8 @@
 mod boxes;
+mod click;
+mod drop;
 mod find;
+mod fonts;
 pub mod frame;
 mod herdr;
 pub mod ink;
@@ -16,6 +19,7 @@ mod pointer;
 mod prompts;
 mod pty;
 mod reports;
+mod scrollbar;
 pub mod shell;
 mod status;
 mod tap;
@@ -27,6 +31,8 @@ mod view;
 mod win32;
 pub mod zoom;
 
+pub use drop::Quote;
+pub use fonts::{ICONS, MONO, load_font};
 pub use pty::{Events, Launch, Listener, Pty, PtyEvent, config, fit, spawn};
 pub use status::{Kind, Record, Records, State};
-pub use view::{BLINK, ICONS, MONO, TerminalEvent, TerminalView, load_font};
+pub use view::{BLINK, TerminalEvent, TerminalView};

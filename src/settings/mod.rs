@@ -60,6 +60,8 @@ pub struct Settings {
     /// The theme while the system is dark; none keeps `theme`.
     pub dark_theme: Option<String>,
     pub font_family: String,
+    /// Families tried in order for a character Font family lacks.
+    pub font_fallbacks: Vec<String>,
     pub font_size: f32,
     pub line_height: f32,
     pub ligatures: bool,
@@ -74,6 +76,10 @@ pub struct Settings {
     pub copy_on_select: bool,
     /// Ely peeks over the main window's top edge.
     pub ely: bool,
+    /// How far in from the pane's left edge she stands, in points, as a drag left her.
+    pub ely_left: f32,
+    /// A check for a newer release at start and once a day.
+    pub check_updates: bool,
     pub show_sessions: bool,
     pub show_panel: bool,
     pub panel: PanelTab,
@@ -93,6 +99,7 @@ impl Default for Settings {
             theme: themes::default_id().into(),
             dark_theme: None,
             font_family: "JetBrains Mono".into(),
+            font_fallbacks: Vec::new(),
             font_size: 13.0,
             line_height: 1.2,
             ligatures: true,
@@ -106,6 +113,8 @@ impl Default for Settings {
             option_as_alt: OptionAsAlt::Off,
             copy_on_select: false,
             ely: true,
+            ely_left: 140.0,
+            check_updates: true,
             show_sessions: true,
             show_panel: true,
             panel: PanelTab::Git,
@@ -124,6 +133,7 @@ pub const PADDING: RangeInclusive<f32> = 0.0..=64.0;
 pub const SCROLLBACK: RangeInclusive<u32> = 0..=100_000;
 pub const COLUMN: RangeInclusive<f32> = 160.0..=960.0;
 pub const WINDOW: RangeInclusive<f32> = 100.0..=16384.0;
+pub const ELY_LEFT: RangeInclusive<f32> = 0.0..=16384.0;
 
 impl Settings {
     /// Every value inside its range, every theme built in; the error names the field.
@@ -138,6 +148,7 @@ impl Settings {
         within("panel_width", self.panel_width, &COLUMN)?;
         within("window_width", self.window_width, &WINDOW)?;
         within("window_height", self.window_height, &WINDOW)?;
+        within("ely_left", self.ely_left, &ELY_LEFT)?;
         for (field, id) in [
             ("theme", Some(&self.theme)),
             ("dark_theme", self.dark_theme.as_ref()),
@@ -147,6 +158,10 @@ impl Settings {
             }
         }
         anyhow::ensure!(!self.font_family.is_empty(), "font_family is empty");
+        anyhow::ensure!(
+            !self.font_fallbacks.iter().any(String::is_empty),
+            "font_fallbacks holds an empty family"
+        );
         if !self.shell.is_empty() {
             program_path(&self.shell)?;
         }
@@ -259,6 +274,23 @@ mod tests {
         };
         let error = settings.validate().expect_err("too wide");
         assert_eq!(error.to_string(), "panel_width is 1000, outside 160 to 960");
+    }
+
+    #[test]
+    fn fallback_fonts_are_none_unless_named_and_none_is_empty() {
+        let older: Settings = serde_json::from_str(r#"{"font_family":"Menlo"}"#).expect("parses");
+        assert!(older.font_fallbacks.is_empty(), "a file from before");
+        let named: Settings =
+            serde_json::from_str(r#"{"font_fallbacks":["Kaiti SC","Noto Sans CJK SC"]}"#)
+                .expect("parses");
+        assert_eq!(named.font_fallbacks, ["Kaiti SC", "Noto Sans CJK SC"]);
+        named.validate().expect("named families pass");
+        let empty = Settings {
+            font_fallbacks: vec!["Kaiti SC".into(), String::new()],
+            ..Settings::default()
+        };
+        let error = empty.validate().expect_err("an empty family");
+        assert_eq!(error.to_string(), "font_fallbacks holds an empty family");
     }
 
     #[test]

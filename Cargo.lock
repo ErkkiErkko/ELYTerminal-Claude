@@ -1747,7 +1747,7 @@ dependencies = [
 
 [[package]]
 name = "elyterminal"
-version = "0.1.7-claude.1"
+version = "0.1.8-claude.1"
 dependencies = [
  "alacritty_terminal",
  "anyhow",

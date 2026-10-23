@@ -20,7 +20,7 @@ Customized binaries are currently available for **Windows x64**:
 
 The release page also provides a source archive, a patch against upstream, and `SHA256SUMS.txt`. The portable ZIP includes the project and third-party licenses.
 
-This customization has been verified locally on Windows x64 with a Release build, 239 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
+This customization has been verified locally on Windows x64 with a Release build, 254 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
 
 The source retains macOS and Linux support, but this customization has not been verified on either platform and does not provide customized installers for them. Upstream installers still use the original Ely character.
 
@@ -32,6 +32,14 @@ The source retains macOS and Linux support, but this customization has not been 
 - **Application icon:** uses the same Claude design holding a terminal. The Windows executable embeds seven transparent icon sizes: 16, 24, 32, 48, 64, 128, and 256 pixels.
 - **Windows fix:** defers the companion window's frame refresh to prevent synchronous callbacks from causing a borrow error during initialization, with regression coverage.
 - **Settings compatibility:** the displayed name is Claude; the existing `ely` configuration key remains valid.
+
+## Updates in 0.1.8
+
+- **Windows environment and shell:** new sessions reload system and user environment variables, expand references, and deduplicate PATH. With no shell configured, the app looks for PowerShell 7, Windows PowerShell, then cmd, skipping unavailable app execution aliases.
+- **WSL:** setting Shell to `wsl` integrates bash, zsh, or fish so Files and Git follow the current directory. Git in a WSL share runs inside the corresponding distribution. Dropped files still insert Windows paths.
+- **Session actions:** right-click a session to duplicate it in the same shell and directory or close it. Drag rows to reorder them while retaining the selected session. Dragging within the rename field still selects text.
+- **Keyboard input:** repeats and releases follow how the key was pressed even if modifiers change. macOS adds optional Natural text editing for Option word editing and Command line editing; it is off by default.
+- **Completion notifications:** background commands must run for at least 5 seconds before posting an end notification, reducing repeated notifications from short commands and prompt tools.
 
 ## Updates in 0.1.7
 
@@ -46,8 +54,8 @@ The source retains macOS and Linux support, but this customization has not been 
 
 - **Rendering:** powered by `alacritty_terminal`, with 256 colors, true color, bold, italic, dim text, five underline styles, wide characters, and combining marks. Box drawing, block characters, and Powerline separators are drawn as geometry to keep adjacent cells connected.
 - **Input and links:** supports xterm and kitty keyboard protocols, Windows win32-input-mode, input methods, mouse reporting, bracketed paste, OSC 8 links, plain URL detection, and scrollback search. Use the link shortcut below to open links. Inside herdr, herdr handles links; hold Shift as well to let the terminal open them directly.
-- **Shell integration:** supports zsh, bash, fish, and PowerShell, reporting the current directory, title, prompts, commands, and exit status.
-- **Sessions:** create, close, and switch sessions. Status indicators show progress, waiting for input, completion, or errors. Hover for detailed reports; a bell in a background session leaves a visual mark without playing a sound.
+- **Shell integration:** supports zsh, bash, fish, PowerShell, and bash, zsh, or fish launched through `wsl` on Windows, reporting the current directory, title, prompts, commands, and exit status.
+- **Sessions:** create, duplicate, close, switch, and reorder sessions by dragging. Status indicators show progress, waiting for input, completion, or errors. Hover for detailed reports; a bell in a background session leaves a visual mark without playing a sound.
 - **Files and Git:** the file tree shows the current session's directory and Git status. The Git panel supports branches, staging, unstaging, discarding changes, commits, history, and diffs. Inside herdr, the directory follows its focused pane.
 - **Layout:** hide or resize sidebars; window size and sidebar widths are saved. On Windows and Linux, a gear button opens Settings.
 - **Notifications and navigation:** background sessions can post system notifications that open the relevant session when clicked. Jump to the previous or next prompt. On macOS, system notifications require the application bundle and do not work through `cargo run`.
@@ -148,7 +156,7 @@ If the configuration cannot be parsed or contains an out-of-range value, the app
 
 ## Upstream and license
 
-This customization is based on upstream `0.1.7`, commit `fe07813fdfa9fd600274066d9fcd88d5f5a3bcc0`. Upstream commit history and copyright notices are preserved.
+This customization is based on upstream `0.1.8`, commit `e477637690a78fe4cb1ea193d62084f72991d376`. Upstream commit history and copyright notices are preserved.
 
 **This customization and its added code continue to use the MIT License.** See [LICENSE](LICENSE). Third-party code and resources retain their own licenses:
 

@@ -20,7 +20,7 @@
 
 发布页也提供源码包、相对上游的补丁和 `SHA256SUMS.txt` 校验文件。便携压缩包包含项目及第三方许可证。
 
-本定制版已在本机 Windows x64 环境中完成 Release 构建、254 项 Rust 测试、格式与 clippy 检查、启动检查和内嵌图标核对。启动检查以隐藏窗口运行，确认角色与 PowerShell 提示符正常加载。
+本定制版已在本机 Windows x64 环境中完成 Release 构建、279 项 Rust 测试、格式与 clippy 检查、启动检查和内嵌图标核对。启动检查以隐藏窗口运行，确认角色与 PowerShell 提示符正常加载。
 
 源码保留了 macOS 和 Linux 支持，但本定制版尚未在这两个平台验证，也未提供对应的定制安装包。上游发布的安装包仍使用原版 Ely 形象。
 
@@ -32,6 +32,15 @@
 - **应用图标：**使用同一 Claude 形象抱着终端的构图。Windows exe 内嵌 16、24、32、48、64、128、256 像素七种透明背景图标。
 - **Windows 修复：**延后角色窗口的边框刷新，修复初始化时同步回调导致的借用错误，并补充回归验证。
 - **设置兼容：**显示名称改为 Claude，原来的 `ely` 配置键继续有效。
+
+## 0.1.9 更新
+
+- **中文界面：**在 Settings → Appearance → Language 选择简体中文；菜单、设置和更新提示随语言切换，人物名称保持 Claude。
+- **Windows 终端：**修复输出有时要按键才刷新的问题，以及擦除、插入或删除宽字符时残留的中文字符；滚轮遵循系统滚动设置。
+- **Shell 状态：**改进嵌套 bash、zsh、fish、PowerShell 和 Nushell 的交互模式识别，避免程序自己的提示符标记误清除运行状态；也合入了 0.1.9 发布后的相关修复。
+- **目录与布局：**Git Bash 和 sh 支持目录联动；新会话可选择固定起始目录，WSL 的 Home 使用发行版自己的主目录。可分别关闭会话拖动和右键菜单，侧栏显示状态会保存。
+- **更新通知：**每条更新通知保留对应版本的下载页，手动重新检查不会让旧通知失效；下载仍来自本 Claude 仓库。
+- **其他平台：**合入 macOS 输入法下的 Option 键修复、Linux 中文输入与最大化窗口点击修复，以及 Wayland 人物窗口修复。新增 Linux 四种格式的打包脚本与自动构建流程。
 
 ## 0.1.8 更新
 
@@ -122,16 +131,17 @@ sudo apt-get install pkg-config libwayland-dev libxkbcommon-dev libxkbcommon-x11
 |---|---|
 | `scripts/windows-zip.ps1` | 构建 Windows exe 并打包 ZIP |
 | `scripts/mac-app.sh` | 构建 macOS 应用包和磁盘映像；签名、公证需要自行配置 |
-| `scripts/linux-tar.sh` | 在 Docker 中构建 Linux 程序并打包桌面入口和图标 |
+| `scripts/linux-packages.sh` | 在 Ubuntu 22.04 容器中构建 tar.gz、DEB、RPM 和 AppImage |
+| `scripts/linux-tar.sh` | 单独构建 Linux tar.gz 包 |
 
-这些脚本沿用上游的产物命名方式；macOS 和 Linux 定制产物尚未验证。
+这些脚本沿用上游的产物命名方式；Linux 包版本将 `0.1.9-claude.1` 写为 `0.1.9.claude.1`，兼容各格式。详见 [Linux 打包说明](packaging/linux/README.md)。macOS 和 Linux 定制产物尚未验证。
 
 ### 日志
 
-日志输出到标准错误流。`RUST_LOG=elyterminal=debug` 可增加日志，`trace` 会记录每次绘制。Windows Release 程序不会打开控制台窗口，可将日志保存到文件：
+日志输出到标准错误流。`RUST_LOG=elyterminal=debug,ely_gpui_component=info` 可增加日志，`trace` 会记录每次绘制。Windows Release 程序不会打开控制台窗口，可将日志保存到文件：
 
 ```powershell
-$env:RUST_LOG = "elyterminal=debug"
+$env:RUST_LOG = "elyterminal=debug,ely_gpui_component=info"
 .\target\release\elyterminal.exe 2> log.txt
 ```
 
@@ -152,14 +162,17 @@ $env:RUST_LOG = "elyterminal=debug"
 - `scripts/check.sh` 执行格式检查、clippy、测试和每个手写文件不超过 500 行的检查。
 - [AGENTS.md](AGENTS.md) 说明项目结构、开发规则和设计记录。
 - [GitHub Actions](https://github.com/ErkkiErkko/ELYTerminal-Claude/actions) 在推送和拉取请求时检查、测试并构建 Windows 版本，也支持手动运行。
+- Linux packages 工作流构建并检查四种 Linux 包，仅保存 Actions 产物，不自动发布 Release。
 - Actions 的构建产物可在对应运行页面下载；正式发布文件位于 [Releases](https://github.com/ErkkiErkko/ELYTerminal-Claude/releases)。
 
 ## 上游与许可证
 
-本定制版基于上游 `0.1.8`，基准提交为 `e477637690a78fe4cb1ea193d62084f72991d376`，保留了上游提交历史和版权声明。
+本定制版基于上游 `0.1.9` 及其后续修复，基准提交为 `6280fd4c3d0b5733efed09d88d41c00703dc6914`，保留了上游提交历史和版权声明。
 
 **本定制版及新增代码继续使用 MIT 许可证**，详见 [LICENSE](LICENSE)。第三方代码和资源继续遵循各自许可证：
 
 - 框线绘制和键盘编码参考 Ghostty，采用 MIT，见 [LICENSE-GHOSTTY](LICENSE-GHOSTTY)。
 - 主题来自 iTerm2-Color-Schemes，采用 MIT，见 [主题许可证](assets/themes/LICENSE)。
 - JetBrains Mono 及其 Nerd Font 版本采用 SIL Open Font License，见 [JetBrains Mono 许可证](assets/fonts/JetBrainsMono-LICENSE.txt)和 [Nerd Font 许可证](assets/fonts/JetBrainsMonoNerdFont-LICENSE.txt)。
+
+- Linux 复合文本解码表来自 libX11，保留 SunSoft 和 Bruno Haible 的[许可声明](vendor/xim-ctext/tables/LICENSE)。

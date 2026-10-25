@@ -20,7 +20,7 @@ Customized binaries are currently available for **Windows x64**:
 
 The release page also provides a source archive, a patch against upstream, and `SHA256SUMS.txt`. The portable ZIP includes the project and third-party licenses.
 
-This customization has been verified locally on Windows x64 with a Release build, 254 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
+This customization has been verified locally on Windows x64 with a Release build, 279 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
 
 The source retains macOS and Linux support, but this customization has not been verified on either platform and does not provide customized installers for them. Upstream installers still use the original Ely character.
 
@@ -32,6 +32,15 @@ The source retains macOS and Linux support, but this customization has not been 
 - **Application icon:** uses the same Claude design holding a terminal. The Windows executable embeds seven transparent icon sizes: 16, 24, 32, 48, 64, 128, and 256 pixels.
 - **Windows fix:** defers the companion window's frame refresh to prevent synchronous callbacks from causing a borrow error during initialization, with regression coverage.
 - **Settings compatibility:** the displayed name is Claude; the existing `ely` configuration key remains valid.
+
+## Updates in 0.1.9
+
+- **Chinese interface:** select 简体中文 under Settings → Appearance → Language. Menus, settings, and update messages switch languages while keeping the companion named Claude.
+- **Windows terminal:** fixes output that waited for a key press and stray wide characters after erase, insert, or delete operations. Mouse wheels follow the system scroll settings.
+- **Shell state:** improves interactive-mode detection for nested bash, zsh, fish, PowerShell, and Nushell, keeping a program's prompt markers from incorrectly clearing its running state. Includes related fixes committed after the upstream 0.1.9 release.
+- **Directories and layout:** Git Bash and sh report their folders. New sessions can start in a fixed directory, and WSL Home uses the distribution's own home. Session dragging and context menus have separate switches; sidebar visibility is saved.
+- **Update notifications:** each notification retains its own release page even after another manual check. Downloads continue to come from this Claude repository.
+- **Other platforms:** includes macOS Option-key fixes with input methods, Linux Chinese input and maximized-window click fixes, and Wayland companion-window fixes. Adds scripts and an automated workflow for four Linux package formats.
 
 ## Updates in 0.1.8
 
@@ -122,16 +131,17 @@ The repository retains upstream packaging scripts, which write their output to `
 |---|---|
 | `scripts/windows-zip.ps1` | Build the Windows executable and package a ZIP |
 | `scripts/mac-app.sh` | Build a macOS application bundle and disk image; signing and notarization require your own configuration |
-| `scripts/linux-tar.sh` | Build in Docker and package the Linux binary, desktop entry, and icon |
+| `scripts/linux-packages.sh` | Build tar.gz, DEB, RPM, and AppImage packages in an Ubuntu 22.04 container |
+| `scripts/linux-tar.sh` | Build the Linux tar.gz package on its own |
 
-These scripts retain upstream output names. Customized macOS and Linux packages have not been verified.
+These scripts retain upstream output names. Linux package versions use `0.1.9.claude.1` for Cargo version `0.1.9-claude.1` to support all formats. See [Linux packaging](packaging/linux/README.md). Customized macOS and Linux packages have not been verified.
 
 ### Logging
 
-Logs go to standard error. `RUST_LOG=elyterminal=debug` enables additional logging; `trace` logs each paint. A Windows Release build does not open a console window, so redirect logs to a file:
+Logs go to standard error. `RUST_LOG=elyterminal=debug,ely_gpui_component=info` enables additional logging; `trace` logs each paint. A Windows Release build does not open a console window, so redirect logs to a file:
 
 ```powershell
-$env:RUST_LOG = "elyterminal=debug"
+$env:RUST_LOG = "elyterminal=debug,ely_gpui_component=info"
 .\target\release\elyterminal.exe 2> log.txt
 ```
 
@@ -152,14 +162,17 @@ If the configuration cannot be parsed or contains an out-of-range value, the app
 - `scripts/check.sh` runs formatting checks, clippy, tests, and the 500-line limit check for handwritten files.
 - [AGENTS.md](AGENTS.md) describes the project structure, development rules, and design decisions.
 - [GitHub Actions](https://github.com/ErkkiErkko/ELYTerminal-Claude/actions) checks, tests, and builds Windows on pushes and pull requests. It also supports manual runs.
+- The Linux packages workflow builds and checks four Linux formats, retaining Actions artifacts without publishing a release.
 - Build artifacts are available from the corresponding Actions run; published downloads are under [Releases](https://github.com/ErkkiErkko/ELYTerminal-Claude/releases).
 
 ## Upstream and license
 
-This customization is based on upstream `0.1.8`, commit `e477637690a78fe4cb1ea193d62084f72991d376`. Upstream commit history and copyright notices are preserved.
+This customization is based on upstream `0.1.9` and its subsequent fixes, commit `6280fd4c3d0b5733efed09d88d41c00703dc6914`. Upstream commit history and copyright notices are preserved.
 
 **This customization and its added code continue to use the MIT License.** See [LICENSE](LICENSE). Third-party code and resources retain their own licenses:
 
 - Box drawing and keyboard encoding follow Ghostty's code under MIT: [LICENSE-GHOSTTY](LICENSE-GHOSTTY).
 - Themes come from iTerm2-Color-Schemes under MIT: [theme license](assets/themes/LICENSE).
 - JetBrains Mono and its Nerd Font build use the SIL Open Font License: [JetBrains Mono license](assets/fonts/JetBrainsMono-LICENSE.txt) and [Nerd Font license](assets/fonts/JetBrainsMonoNerdFont-LICENSE.txt).
+
+- Linux compound text decoding tables come from libX11 and retain the [SunSoft and Bruno Haible notice](vendor/xim-ctext/tables/LICENSE).

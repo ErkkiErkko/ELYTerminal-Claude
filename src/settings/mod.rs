@@ -1,3 +1,4 @@
+mod profiles;
 mod store;
 pub mod window;
 
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::themes;
 
+pub use profiles::{Profile, command_line, words};
 pub use store::{SettingsStore, load, save};
 
 /// Where new sessions start: home, the shown folder, `start_folder`.
@@ -44,6 +46,25 @@ pub enum OptionAsAlt {
     Left,
     Right,
     Both,
+}
+
+/// What blurs behind a see-through window on Windows 11.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Backdrop {
+    #[default]
+    Acrylic,
+    Mica,
+    MicaAlt,
+}
+
+/// How glyphs antialias: grayscale, as Windows Terminal draws, or by subpixel.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Antialias {
+    #[default]
+    Grayscale,
+    Subpixel,
 }
 
 /// The interface's language, by the tag Ely's `I18n` names it.
@@ -79,24 +100,44 @@ pub enum PanelTab {
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub language: Language,
+    /// The interface's family; empty for the system's.
+    pub interface_font: String,
+    /// The interface's base text, in pixels.
+    pub interface_size: u8,
     /// A program path; empty runs the login shell.
     pub shell: String,
     pub start_in: StartIn,
     /// Start in's Folder; empty until one is chosen.
     pub start_folder: String,
+    /// What the new-session menu offers before the detected shells.
+    pub profiles: Vec<Profile>,
     pub theme: String,
     /// The theme while the system is dark; none keeps `theme`.
     pub dark_theme: Option<String>,
+    /// Themes the user made, each from Ely Dark.
+    pub custom_themes: Vec<themes::CustomTheme>,
+    /// A picture under the terminal; empty for none.
+    pub background_image: String,
     pub font_family: String,
     /// Families tried in order for a character Font family lacks.
     pub font_fallbacks: Vec<String>,
+    /// Draws CJK characters; empty leaves them to the family.
+    pub cjk_font: String,
     pub font_size: f32,
+    /// Normal text's weight; bold sits 300 above it.
+    pub font_weight: f32,
     pub line_height: f32,
+    /// Subpixel draws only on an opaque window, and never on macOS.
+    pub text_antialias: Antialias,
     pub ligatures: bool,
     pub cursor_style: CursorStyle,
     pub cursor_blink: bool,
+    /// The cursor glides to its new cell.
+    pub cursor_smooth: bool,
     pub background_opacity: f32,
     pub background_blur: bool,
+    /// Windows 11's backdrop while blurred.
+    pub backdrop: Backdrop,
     pub padding_x: f32,
     pub padding_y: f32,
     pub scrollback: u32,
@@ -115,6 +156,8 @@ pub struct Settings {
     pub drag_sessions: bool,
     /// A right press on a session's row opens its menu.
     pub session_menu: bool,
+    /// A right press on a Files name opens its menu.
+    pub files_menu: bool,
     pub show_panel: bool,
     pub panel: PanelTab,
     /// The sessions and right columns' widths, in pixels, as their borders were dragged.
@@ -123,26 +166,47 @@ pub struct Settings {
     /// The main window's size, unmaximized, in pixels.
     pub window_width: f32,
     pub window_height: f32,
+    /// Where the main window was left.
+    pub window_place: Option<Place>,
+}
+
+/// A display's gpui uuid, and the window's top-left from its origin.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Place {
+    pub display: String,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             language: Language::English,
+            interface_font: String::new(),
+            interface_size: 13,
             shell: String::new(),
             start_in: StartIn::Home,
             start_folder: String::new(),
+            profiles: Vec::new(),
             theme: themes::default_id().into(),
             dark_theme: None,
+            custom_themes: Vec::new(),
+            background_image: String::new(),
             font_family: "JetBrains Mono".into(),
             font_fallbacks: Vec::new(),
+            cjk_font: String::new(),
             font_size: 13.0,
+            font_weight: 400.0,
             line_height: 1.2,
+            text_antialias: Antialias::Grayscale,
             ligatures: true,
             cursor_style: CursorStyle::Block,
             cursor_blink: true,
+            cursor_smooth: true,
             background_opacity: 0.88,
             background_blur: true,
+            backdrop: Backdrop::Acrylic,
             padding_x: 10.0,
             padding_y: 8.0,
             scrollback: 10_000,
@@ -155,17 +219,21 @@ impl Default for Settings {
             show_sessions: true,
             drag_sessions: true,
             session_menu: true,
+            files_menu: false,
             show_panel: true,
             panel: PanelTab::Git,
             sessions_width: 240.0,
             panel_width: 240.0,
             window_width: 1200.0,
             window_height: 760.0,
+            window_place: None,
         }
     }
 }
 
+pub const INTERFACE_SIZE: RangeInclusive<u8> = 12..=16;
 pub const FONT_SIZE: RangeInclusive<f32> = 6.0..=72.0;
+pub const FONT_WEIGHT: RangeInclusive<f32> = 100.0..=900.0;
 pub const LINE_HEIGHT: RangeInclusive<f32> = 1.0..=2.0;
 pub const OPACITY: RangeInclusive<f32> = 0.3..=1.0;
 pub const PADDING: RangeInclusive<f32> = 0.0..=64.0;
@@ -173,11 +241,14 @@ pub const SCROLLBACK: RangeInclusive<u32> = 0..=100_000;
 pub const COLUMN: RangeInclusive<f32> = 160.0..=960.0;
 pub const WINDOW: RangeInclusive<f32> = 100.0..=16384.0;
 pub const ELY_LEFT: RangeInclusive<f32> = 0.0..=16384.0;
+pub const PLACE: RangeInclusive<f32> = -32768.0..=32768.0;
 
 impl Settings {
     /// Every value inside its range, every theme built in; the error names the field.
     pub fn validate(&self) -> anyhow::Result<()> {
+        within("interface_size", self.interface_size, &INTERFACE_SIZE)?;
         within("font_size", self.font_size, &FONT_SIZE)?;
+        within("font_weight", self.font_weight, &FONT_WEIGHT)?;
         within("line_height", self.line_height, &LINE_HEIGHT)?;
         within("background_opacity", self.background_opacity, &OPACITY)?;
         within("padding_x", self.padding_x, &PADDING)?;
@@ -188,13 +259,35 @@ impl Settings {
         within("window_width", self.window_width, &WINDOW)?;
         within("window_height", self.window_height, &WINDOW)?;
         within("ely_left", self.ely_left, &ELY_LEFT)?;
+        if let Some(place) = &self.window_place {
+            anyhow::ensure!(!place.display.is_empty(), "window_place names no display");
+            within("window_place", place.x, &PLACE)?;
+            within("window_place", place.y, &PLACE)?;
+        }
         for (field, id) in [
             ("theme", Some(&self.theme)),
             ("dark_theme", self.dark_theme.as_ref()),
         ] {
             if let Some(id) = id {
-                anyhow::ensure!(themes::known(id), "{field} is {id:?}, no built-in theme");
+                let custom = self.custom_themes.iter().any(|theme| theme.id == *id);
+                anyhow::ensure!(
+                    themes::known(id) || custom,
+                    "{field} is {id:?}, no built-in or custom theme"
+                );
             }
+        }
+        for (at, theme) in self.custom_themes.iter().enumerate() {
+            theme.theme()?;
+            anyhow::ensure!(
+                !self.custom_themes[..at]
+                    .iter()
+                    .any(|other| other.id == theme.id),
+                "custom_themes holds {} twice",
+                theme.id
+            );
+        }
+        if !self.background_image.is_empty() {
+            background_image(&self.background_image)?;
         }
         anyhow::ensure!(!self.font_family.is_empty(), "font_family is empty");
         anyhow::ensure!(
@@ -207,12 +300,36 @@ impl Settings {
         if !self.start_folder.is_empty() {
             start_folder(&self.start_folder)?;
         }
+        for (at, profile) in self.profiles.iter().enumerate() {
+            profile.check()?;
+            anyhow::ensure!(
+                !self.profiles[..at]
+                    .iter()
+                    .any(|other| other.name == profile.name),
+                "profiles holds {} twice",
+                profile.name
+            );
+        }
         anyhow::ensure!(
             self.start_in != StartIn::Folder || !self.start_folder.is_empty(),
             "start_in is folder, but start_folder names none"
         );
         Ok(())
     }
+}
+
+/// The background picture: a full path to a file.
+pub fn background_image(image: &str) -> anyhow::Result<PathBuf> {
+    let path = Path::new(image);
+    anyhow::ensure!(
+        path.is_absolute(),
+        "background_image is {image:?}, not a full path"
+    );
+    anyhow::ensure!(
+        path.is_file(),
+        "background_image is {image:?}, which names no file"
+    );
+    Ok(path.to_path_buf())
 }
 
 /// `folder` to start sessions in: a full path that exists.

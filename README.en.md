@@ -14,13 +14,15 @@ The terminal is built with Rust, GPUI, and Ely components. Sessions sit on the l
 
 Customized binaries are currently available for **Windows x64**:
 
-1. Download `ELYTerminal-Claude.exe`, or download and extract `ELYTerminal-Claude-windows-x64.zip`.
-2. Double-click `ELYTerminal-Claude.exe` to start. Rust is not required to use the program.
+1. Download and fully extract `ELYTerminal-Claude-windows-x64.zip`, including when upgrading from an older release.
+2. Keep `conpty.dll` and `OpenConsole.exe` beside `ELYTerminal-Claude.exe`, then double-click the main executable. Rust is not required.
 3. Enable or disable the companion under **Settings → Terminal → Claude**.
+
+The separate exe download only replaces the main executable in the complete package of the same version; it does not replace the complete ZIP.
 
 The release page also provides a source archive, a patch against upstream, and `SHA256SUMS.txt`. The portable ZIP includes the project and third-party licenses.
 
-This customization has been verified locally on Windows x64 with a Release build, 279 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
+This customization has been verified locally on Windows x64 with a Release build, 416 Rust tests, formatting and clippy checks, a startup check, and embedded-icon verification. The startup check used hidden windows and confirmed that the companion loaded and PowerShell reached its prompt.
 
 The source retains macOS and Linux support, but this customization has not been verified on either platform and does not provide customized installers for them. Upstream installers still use the original Ely character.
 
@@ -32,6 +34,15 @@ The source retains macOS and Linux support, but this customization has not been 
 - **Application icon:** uses the same Claude design holding a terminal. The Windows executable embeds seven transparent icon sizes: 16, 24, 32, 48, 64, 128, and 256 pixels.
 - **Windows fix:** defers the companion window's frame refresh to prevent synchronous callbacks from causing a borrow error during initialization, with regression coverage.
 - **Settings compatibility:** the displayed name is Claude; the existing `ely` configuration key remains valid.
+
+## Updates in 0.2.2 (including 0.2.0 and 0.2.1)
+
+- **Graphics and clipboard:** supports kitty images, animations, and OSC 5522 clipboard transfers. Clipboard reads prompt by default, with per-session permission. Scrollback compression reduces history memory use.
+- **Shell profiles:** choose discovered shells, WSL distributions, or custom commands and folders beside the new-session button. Includes cmd and PowerShell integration improvements, zsh resize prompt fixes, and Shift+Enter support.
+- **Appearance:** adds custom themes, background images, interface fonts and sizes, CJK fonts, font weight, antialiasing, smooth cursor movement, and Windows 11 Mica backdrops.
+- **Files and windows:** the file tree refreshes automatically and supports dragging paths into the terminal. Optional context menus open files, copy paths, and start sessions. Choose a folder from the Files tab, restore window display and position, and optionally add an Explorer menu entry.
+- **Windows runtime:** the complete portable ZIP includes Microsoft's ConPTY and OpenConsole for full-screen mouse input. Keep both files beside the main executable.
+- **Claude customization:** retains the character, animation, icons, and fork update source. Includes upstream documentation and packaging changes; upstream website deployment remains restricted to its own repository.
 
 ## Updates in 0.1.9
 
@@ -108,7 +119,7 @@ cargo build --release --locked
 .\target\release\elyterminal.exe
 ```
 
-A local build produces `elyterminal.exe`; the release download is renamed to `ELYTerminal-Claude.exe`.
+Local builds copy the ConPTY components beside the executable; keep them together when distributing or moving it. A local build produces `elyterminal.exe`; the release download is renamed to `ELYTerminal-Claude.exe`.
 
 ### macOS and Linux
 
@@ -134,7 +145,7 @@ The repository retains upstream packaging scripts, which write their output to `
 | `scripts/linux-packages.sh` | Build tar.gz, DEB, RPM, and AppImage packages in an Ubuntu 22.04 container |
 | `scripts/linux-tar.sh` | Build the Linux tar.gz package on its own |
 
-These scripts retain upstream output names. Linux package versions use `0.1.9.claude.1` for Cargo version `0.1.9-claude.1` to support all formats. See [Linux packaging](packaging/linux/README.md). Customized macOS and Linux packages have not been verified.
+These scripts retain upstream output names. Linux package versions use `0.2.2.claude.1` for Cargo version `0.2.2-claude.1` to support all formats. See [Linux packaging](packaging/linux/README.md). Customized macOS and Linux packages have not been verified.
 
 ### Logging
 
@@ -167,7 +178,7 @@ If the configuration cannot be parsed or contains an out-of-range value, the app
 
 ## Upstream and license
 
-This customization is based on upstream `0.1.9` and its subsequent fixes, commit `6280fd4c3d0b5733efed09d88d41c00703dc6914`. Upstream commit history and copyright notices are preserved.
+This customization is based on upstream `0.2.2` and its subsequent commits, commit `ba664ef6ef0cdfcb35dc6b65d538cc58e7ecd313`. Upstream commit history and copyright notices are preserved.
 
 **This customization and its added code continue to use the MIT License.** See [LICENSE](LICENSE). Third-party code and resources retain their own licenses:
 
@@ -176,3 +187,5 @@ This customization is based on upstream `0.1.9` and its subsequent fixes, commit
 - JetBrains Mono and its Nerd Font build use the SIL Open Font License: [JetBrains Mono license](assets/fonts/JetBrainsMono-LICENSE.txt) and [Nerd Font license](assets/fonts/JetBrainsMonoNerdFont-LICENSE.txt).
 
 - Linux compound text decoding tables come from libX11 and retain the [SunSoft and Bruno Haible notice](vendor/xim-ctext/tables/LICENSE).
+
+- The bundled Microsoft ConPTY and OpenConsole use MIT: [ConPTY license](vendor/conpty/LICENSE).

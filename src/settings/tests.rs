@@ -16,6 +16,34 @@ fn a_file_without_the_session_switches_leaves_them_on() {
 }
 
 #[test]
+fn a_file_without_files_menu_leaves_it_off() {
+    let settings: Settings = serde_json::from_str("{}").expect("every field has a default");
+    assert!(
+        !settings.files_menu,
+        "a right press on Files opens nothing by default"
+    );
+}
+
+#[test]
+fn a_backdrop_is_acrylic_unless_named() {
+    let settings: Settings = serde_json::from_str("{}").expect("every field has a default");
+    assert_eq!(settings.backdrop, Backdrop::Acrylic);
+    let settings: Settings =
+        serde_json::from_str(r#"{"backdrop": "mica_alt"}"#).expect("Mica Alt is a backdrop");
+    assert_eq!(settings.backdrop, Backdrop::MicaAlt);
+    assert!(serde_json::from_str::<Settings>(r#"{"backdrop": "glass"}"#).is_err());
+}
+
+#[test]
+fn antialias_is_grayscale_unless_subpixel_is_named() {
+    assert_eq!(Settings::default().text_antialias, Antialias::Grayscale);
+    let settings: Settings = serde_json::from_str(r#"{"text_antialias": "subpixel"}"#)
+        .expect("subpixel is an antialiasing");
+    assert_eq!(settings.text_antialias, Antialias::Subpixel);
+    assert!(serde_json::from_str::<Settings>(r#"{"text_antialias": "cleartype"}"#).is_err());
+}
+
+#[test]
 fn a_value_out_of_range_names_its_field() {
     let settings = Settings {
         line_height: 2.5,
@@ -23,6 +51,12 @@ fn a_value_out_of_range_names_its_field() {
     };
     let error = settings.validate().expect_err("2.5 is too tall");
     assert_eq!(error.to_string(), "line_height is 2.5, outside 1 to 2");
+    let settings = Settings {
+        font_weight: 950.0,
+        ..Settings::default()
+    };
+    let error = settings.validate().expect_err("950 is past black");
+    assert_eq!(error.to_string(), "font_weight is 950, outside 100 to 900");
     let settings = Settings {
         scrollback: 100_001,
         ..Settings::default()
@@ -191,7 +225,7 @@ fn an_unknown_theme_fails() {
     };
     assert_eq!(
         settings.validate().expect_err("empty").to_string(),
-        "dark_theme is \"\", no built-in theme"
+        "dark_theme is \"\", no built-in or custom theme"
     );
     let settings = Settings {
         theme: "mocha".into(),
@@ -199,7 +233,7 @@ fn an_unknown_theme_fails() {
     };
     assert_eq!(
         settings.validate().expect_err("unknown").to_string(),
-        "theme is \"mocha\", no built-in theme"
+        "theme is \"mocha\", no built-in or custom theme"
     );
 }
 
@@ -223,4 +257,107 @@ fn start_in_a_folder_needs_one_that_exists_at_a_full_path() {
     );
     settings.start_folder.clear();
     settings.validate().expect("home, no folder");
+}
+
+#[test]
+fn a_window_place_is_kept_within_its_range() {
+    let settings: Settings = serde_json::from_str("{}").expect("every field has a default");
+    assert_eq!(settings.window_place, None, "a first start centers");
+    let place = |display: &str, x, y| Settings {
+        window_place: Some(super::Place {
+            display: display.into(),
+            x,
+            y,
+        }),
+        ..Settings::default()
+    };
+    let error = place("d", -100.0, 40000.0)
+        .validate()
+        .expect_err("past every screen");
+    assert_eq!(
+        error.to_string(),
+        "window_place is 40000, outside -32768 to 32768"
+    );
+    let error = place("", 0.0, 0.0).validate().expect_err("no display");
+    assert_eq!(error.to_string(), "window_place names no display");
+    place("d", -2560.0, -200.0)
+        .validate()
+        .expect("a place within range");
+}
+
+#[test]
+fn a_custom_theme_is_chosen_by_its_id_and_held_once() {
+    let mine = crate::themes::CustomTheme::from_ely_dark(&[], "Mine".into());
+    let settings = Settings {
+        theme: mine.id.clone(),
+        custom_themes: vec![mine.clone()],
+        ..Settings::default()
+    };
+    settings.validate().expect("a custom theme by its id");
+    let gone = Settings {
+        custom_themes: Vec::new(),
+        ..settings.clone()
+    };
+    assert_eq!(
+        gone.validate().expect_err("no such theme").to_string(),
+        "theme is \"custom-1\", no built-in or custom theme"
+    );
+    let twice = Settings {
+        custom_themes: vec![mine.clone(), mine],
+        ..settings
+    };
+    assert_eq!(
+        twice.validate().expect_err("one id twice").to_string(),
+        "custom_themes holds custom-1 twice"
+    );
+}
+
+#[test]
+fn a_background_image_is_a_file_at_a_full_path() {
+    let image = |path: &str| Settings {
+        background_image: path.into(),
+        ..Settings::default()
+    };
+    assert_eq!(
+        image("a.png").validate().expect_err("relative").to_string(),
+        "background_image is \"a.png\", not a full path"
+    );
+    let dir = std::env::temp_dir();
+    let missing = dir.join("elyterminal-no-such-image.png");
+    let missing = missing.to_str().expect("utf-8");
+    assert!(image(missing).validate().is_err(), "no file there");
+    let folder = dir.to_str().expect("utf-8");
+    assert!(image(folder).validate().is_err(), "a folder is no picture");
+    let file = dir.join("elyterminal-background.png");
+    std::fs::write(&file, b"\x89PNG").expect("a file");
+    image(file.to_str().expect("utf-8"))
+        .validate()
+        .expect("a file at a full path");
+}
+
+#[test]
+fn the_interface_wears_the_system_font_at_13_px_unless_named() {
+    let settings: Settings = serde_json::from_str("{}").expect("every field has a default");
+    assert_eq!(
+        (settings.interface_font.as_str(), settings.interface_size),
+        ("", 13)
+    );
+    let named: Settings =
+        serde_json::from_str(r#"{"interface_font":"Menlo","interface_size":16}"#).expect("parses");
+    assert_eq!(
+        (named.interface_font.as_str(), named.interface_size),
+        ("Menlo", 16)
+    );
+    named.validate().expect("16 px passes");
+    for size in [11, 17] {
+        let settings = Settings {
+            interface_size: size,
+            ..Settings::default()
+        };
+        let error = settings.validate().expect_err("outside 12 to 16");
+        assert_eq!(
+            error.to_string(),
+            format!("interface_size is {size}, outside 12 to 16")
+        );
+    }
 }

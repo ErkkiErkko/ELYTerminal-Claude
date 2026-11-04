@@ -14,13 +14,15 @@
 
 当前提供 **Windows x64** 定制版：
 
-1. 下载 `ELYTerminal-Claude.exe`，或下载并解压 `ELYTerminal-Claude-windows-x64.zip`。
-2. 双击 `ELYTerminal-Claude.exe` 启动，使用时不需要安装 Rust。
+1. 下载并完整解压 `ELYTerminal-Claude-windows-x64.zip`。从旧版升级时也请使用完整压缩包。
+2. 保留同目录中的 `conpty.dll` 和 `OpenConsole.exe`，双击 `ELYTerminal-Claude.exe` 启动；不需要安装 Rust。
 3. 在 **Settings → Terminal → Claude** 中开启或关闭动画人物。
+
+单独下载的 exe 仅用于手动替换同版本完整包中的主程序，不能代替完整压缩包。
 
 发布页也提供源码包、相对上游的补丁和 `SHA256SUMS.txt` 校验文件。便携压缩包包含项目及第三方许可证。
 
-本定制版已在本机 Windows x64 环境中完成 Release 构建、279 项 Rust 测试、格式与 clippy 检查、启动检查和内嵌图标核对。启动检查以隐藏窗口运行，确认角色与 PowerShell 提示符正常加载。
+本定制版已在本机 Windows x64 环境中完成 Release 构建、416 项 Rust 测试、格式与 clippy 检查、启动检查和内嵌图标核对。启动检查以隐藏窗口运行，确认角色与 PowerShell 提示符正常加载。
 
 源码保留了 macOS 和 Linux 支持，但本定制版尚未在这两个平台验证，也未提供对应的定制安装包。上游发布的安装包仍使用原版 Ely 形象。
 
@@ -32,6 +34,15 @@
 - **应用图标：**使用同一 Claude 形象抱着终端的构图。Windows exe 内嵌 16、24、32、48、64、128、256 像素七种透明背景图标。
 - **Windows 修复：**延后角色窗口的边框刷新，修复初始化时同步回调导致的借用错误，并补充回归验证。
 - **设置兼容：**显示名称改为 Claude，原来的 `ely` 配置键继续有效。
+
+## 0.2.2 更新（含 0.2.0 与 0.2.1）
+
+- **图片与剪贴板：**支持 kitty 图片、动画与 OSC 5522 剪贴板协议；程序读取剪贴板前默认询问，可按会话授权。历史输出支持压缩，改善滚动历史的内存占用。
+- **Shell 配置：**在新建会话旁选择本机 Shell、WSL 发行版或自定义命令与目录；改进 cmd 和 PowerShell 集成，修复 zsh 缩放后的重复提示符，支持 Shift+Enter 换行。
+- **外观：**新增自定义主题、背景图片、界面字体与字号、中日韩字体、字重、抗锯齿和光标平滑移动；Windows 11 可选择云母材质。
+- **文件与窗口：**文件树自动刷新，可拖入终端；文件右键菜单支持打开、复制路径和新建会话。可从文件标签选择目录开新会话，窗口保存显示器与位置，并提供可选的资源管理器菜单。
+- **Windows 运行组件：**完整便携包附带微软 ConPTY 与 OpenConsole，保留全屏程序的鼠标输入。两者必须与主程序放在同一文件夹。
+- **Claude 定制：**保留人物、动画、图标和专属更新源；新增上游文档与打包流程，网站部署仅适用于原项目。
 
 ## 0.1.9 更新
 
@@ -108,7 +119,7 @@ cargo build --release --locked
 .\target\release\elyterminal.exe
 ```
 
-本地构建生成的程序名为 `elyterminal.exe`；发布页中的程序重命名为 `ELYTerminal-Claude.exe`。
+本地构建会自动将 ConPTY 组件复制到程序旁；分发或移动程序时请保留这些文件。本地构建生成的程序名为 `elyterminal.exe`；发布页中的程序重命名为 `ELYTerminal-Claude.exe`。
 
 ### macOS 和 Linux
 
@@ -134,7 +145,7 @@ sudo apt-get install pkg-config libwayland-dev libxkbcommon-dev libxkbcommon-x11
 | `scripts/linux-packages.sh` | 在 Ubuntu 22.04 容器中构建 tar.gz、DEB、RPM 和 AppImage |
 | `scripts/linux-tar.sh` | 单独构建 Linux tar.gz 包 |
 
-这些脚本沿用上游的产物命名方式；Linux 包版本将 `0.1.9-claude.1` 写为 `0.1.9.claude.1`，兼容各格式。详见 [Linux 打包说明](packaging/linux/README.md)。macOS 和 Linux 定制产物尚未验证。
+这些脚本沿用上游的产物命名方式；Linux 包版本将 `0.2.2-claude.1` 写为 `0.2.2.claude.1`，兼容各格式。详见 [Linux 打包说明](packaging/linux/README.md)。macOS 和 Linux 定制产物尚未验证。
 
 ### 日志
 
@@ -167,7 +178,7 @@ $env:RUST_LOG = "elyterminal=debug,ely_gpui_component=info"
 
 ## 上游与许可证
 
-本定制版基于上游 `0.1.9` 及其后续修复，基准提交为 `6280fd4c3d0b5733efed09d88d41c00703dc6914`，保留了上游提交历史和版权声明。
+本定制版基于上游 `0.2.2` 及其后续提交，基准提交为 `ba664ef6ef0cdfcb35dc6b65d538cc58e7ecd313`，保留了上游提交历史和版权声明。
 
 **本定制版及新增代码继续使用 MIT 许可证**，详见 [LICENSE](LICENSE)。第三方代码和资源继续遵循各自许可证：
 
@@ -176,3 +187,5 @@ $env:RUST_LOG = "elyterminal=debug,ely_gpui_component=info"
 - JetBrains Mono 及其 Nerd Font 版本采用 SIL Open Font License，见 [JetBrains Mono 许可证](assets/fonts/JetBrainsMono-LICENSE.txt)和 [Nerd Font 许可证](assets/fonts/JetBrainsMonoNerdFont-LICENSE.txt)。
 
 - Linux 复合文本解码表来自 libX11，保留 SunSoft 和 Bruno Haible 的[许可声明](vendor/xim-ctext/tables/LICENSE)。
+
+- Windows 附带的 Microsoft ConPTY 与 OpenConsole 采用 MIT，见 [ConPTY 许可证](vendor/conpty/LICENSE)。

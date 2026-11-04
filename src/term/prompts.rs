@@ -16,6 +16,12 @@ const NUMBERED: char = '\u{7f}';
 /// What ends the id of a link on the line typed after a prompt.
 const TYPED: char = 'i';
 
+/// What starts a redraw id in a prompt's link, for a prompt its shell draws again on a resize.
+const REDRAW: char = 'r';
+
+mod resize;
+pub(super) use resize::{keep, restore};
+
 /// What the terminal's own link stamps: a prompt's cells, by its number, or the line typed after it, OSC 133 B to C, by the commands ended before it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Part {
@@ -23,10 +29,11 @@ pub(super) enum Part {
     Input(u32),
 }
 
-/// How a mark moves the link: a prompt starts, its input starts, or the command ends it.
+/// How a mark moves the link: a prompt starts, a secondary one, its input starts, or the command ends it.
 #[derive(Debug, PartialEq)]
 enum Edge {
     Prompt,
+    Secondary,
     Input,
     End,
 }
@@ -57,6 +64,8 @@ enum State {
     Held,
     /// An OSC passed on as it comes.
     Passing,
+    /// An APC, DCS, SOS or PM string: no control runs.
+    String,
 }
 
 /// Rewrites what goes to the parser so it stamps each prompt's cells with a link of its own, numbered per prompt.
@@ -73,6 +82,10 @@ pub(crate) struct Prompts {
     sent: bool,
     /// The prompt or input open now, from its mark to the next.
     open: Option<Part>,
+    /// The redraw id of the prompt open now, when its shell draws it again.
+    redraw: Option<u32>,
+    /// The last redraw id given.
+    redraws: u32,
     /// The target of a program's link open now, to open it again with a prompt's number and without.
     target: Option<Vec<u8>>,
     /// The last prompt's number.
@@ -92,8 +105,19 @@ impl Prompts {
     /// What goes to the parser for `read`: marks become links, and a held start waits for its end.
     pub fn pass(&mut self, read: &[u8]) -> &[u8] {
         self.out.clear();
-        for &byte in read {
-            self.step(byte);
+        let mut rest = read;
+        while !rest.is_empty() {
+            // Ground passes on whole, up to the next ESC.
+            if self.state == State::Ground {
+                let run = memchr::memchr(ESC, rest).unwrap_or(rest.len());
+                self.out.extend_from_slice(&rest[..run]);
+                rest = &rest[run..];
+                if rest.is_empty() {
+                    break;
+                }
+            }
+            self.step(rest[0]);
+            rest = &rest[1..];
         }
         &self.out
     }
@@ -133,10 +157,16 @@ impl Prompts {
                 self.out.push(byte);
                 State::Escape { sent: true }
             }
+            (State::Escape { .. }, b'_' | b'P' | b'X' | b'^') => {
+                self.held.push(byte);
+                self.release();
+                State::String
+            }
             (State::Escape { .. }, _) => {
                 // A full reset clears the link the parser writes with.
                 if byte == b'c' {
                     (self.open, self.target) = (None, None);
+                    self.redraw = None;
                 }
                 self.held.push(byte);
                 self.release();
@@ -170,6 +200,19 @@ impl Prompts {
                 self.out.push(byte);
                 self.read(byte);
                 State::Passing
+            }
+            // Its ESC leaves vte in the escape: send now.
+            (State::String, ESC) => {
+                self.out.push(ESC);
+                State::Escape { sent: true }
+            }
+            (State::String, 0x18 | 0x1a) => {
+                self.out.push(byte);
+                State::Ground
+            }
+            (State::String, _) => {
+                self.out.push(byte);
+                State::String
             }
         };
     }
@@ -213,11 +256,19 @@ impl Prompts {
                 (Edge::Prompt, _) => {
                     self.count = self.count.wrapping_add(1);
                     self.open = Some(Part::Prompt(self.count));
-                    Some(link(Part::Prompt(self.count), target))
+                    self.redraw = redraws(&mut self.redraws, &self.body);
+                    Some(link(Part::Prompt(self.count), target, self.redraw))
                 }
+                // A secondary prompt, as zsh's PS2, shares its prompt's number and is redrawn alone.
+                (Edge::Secondary, Some(_)) => {
+                    self.open = Some(Part::Prompt(self.count));
+                    self.redraw = redraws(&mut self.redraws, &self.body);
+                    Some(link(Part::Prompt(self.count), target, self.redraw))
+                }
+                (Edge::Secondary, None) => None,
                 (Edge::Input, Some(Part::Prompt(_))) => {
                     self.open = Some(Part::Input(self.ended));
-                    Some(link(Part::Input(self.ended), target))
+                    Some(link(Part::Input(self.ended), target, self.redraw))
                 }
                 (Edge::Input, _) => None,
                 (Edge::End, open) => {
@@ -230,7 +281,7 @@ impl Prompts {
             self.target = opens.then(|| target.to_vec());
             // Inside a prompt or input a program's link carries its number; its end takes the terminal's link up again.
             let target = if opens { target } else { LINK.as_bytes() };
-            self.open.map(|part| link(part, target))
+            self.open.map(|part| link(part, target, self.redraw))
         } else {
             None
         };
@@ -256,6 +307,17 @@ impl Prompts {
     }
 }
 
+/// A new redraw id when a mark's body says its shell draws the prompt again.
+fn redraws(last: &mut u32, body: &[u8]) -> Option<u32> {
+    let promised = body
+        .split(|&byte| byte == b';')
+        .any(|option| option == b"redraw=1");
+    promised.then(|| {
+        *last = last.wrapping_add(1);
+        *last
+    })
+}
+
 /// How a mark's body moves the link, as `marks::read` reads its letter; none for no mark.
 fn mark(body: &[u8]) -> Option<Edge> {
     let (&letter, rest) = body.split_first()?;
@@ -264,6 +326,12 @@ fn mark(body: &[u8]) -> Option<Edge> {
     }
     match letter {
         b'A' | b'N' => Some(Edge::Prompt),
+        b'P' if rest
+            .split(|&byte| byte == b';')
+            .any(|option| option == b"k=s") =>
+        {
+            Some(Edge::Secondary)
+        }
         b'B' | b'I' => Some(Edge::Input),
         b'C' | b'D' => Some(Edge::End),
         _ => None,
@@ -281,11 +349,15 @@ fn user(body: &[u8]) -> Option<(bool, &[u8])> {
 }
 
 /// A link to `target` whose id carries `part`'s prompt number.
-fn link(part: Part, target: &[u8]) -> Vec<u8> {
-    let id = match part {
+fn link(part: Part, target: &[u8], redraw: Option<u32>) -> Vec<u8> {
+    let mut id = match part {
         Part::Prompt(number) => format!("{NUMBERED}{number}"),
         Part::Input(number) => format!("{NUMBERED}{number}{TYPED}"),
     };
+    if let Some(number) = redraw {
+        id.push(REDRAW);
+        id.push_str(&number.to_string());
+    }
     let mut link = format!("\x1b]8;id={id};").into_bytes();
     link.extend_from_slice(target);
     link.push(0x07);
@@ -304,10 +376,17 @@ fn plain(target: &[u8]) -> Vec<u8> {
 pub(super) fn part(cell: &Cell) -> Option<Part> {
     let link = cell.hyperlink()?;
     let number = link.id().strip_prefix(NUMBERED)?;
+    let number = number.split_once(REDRAW).map_or(number, |(part, _)| part);
     match number.strip_suffix(TYPED) {
         Some(typed) => typed.parse().ok().map(Part::Input),
         None => number.parse().ok().map(Part::Prompt),
     }
+}
+
+/// The redraw id of the prompt `cell` belongs to, when its shell draws it again.
+fn redraw(cell: &Cell) -> Option<u32> {
+    part(cell)?;
+    cell.hyperlink()?.id().split_once(REDRAW)?.1.parse().ok()
 }
 
 /// Whether `cell` belongs to a prompt.

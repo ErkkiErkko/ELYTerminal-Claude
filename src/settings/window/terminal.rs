@@ -25,6 +25,8 @@ use crate::{
     },
 };
 
+pub(super) mod profiles;
+
 /// Each way Option types Alt, its key and name's key.
 const OPTIONS: [(OptionAsAlt, &str, &str); 4] = [
     (OptionAsAlt::Off, "off", "et.option.off"),
@@ -37,7 +39,7 @@ const OPTIONS: [(OptionAsAlt, &str, &str); 4] = [
 const PLACES: usize = 8;
 
 impl SettingsWindow {
-    /// Shell, start in, scrollback, Option as Alt and natural text editing on macOS, copy on select, Ely and updates, then the shortcuts.
+    /// The terminal's settings in order, then the shortcuts.
     pub(super) fn terminal(&self, cx: &Context<Self>) -> Div {
         let settings = SettingsStore::get(cx);
         let this = cx.entity();
@@ -127,6 +129,9 @@ impl SettingsWindow {
             settings.session_menu,
             |settings, on| settings.session_menu = on,
         );
+        let files_menu = switch(&this, "files_menu", settings.files_menu, |settings, on| {
+            settings.files_menu = on
+        });
         let section = section
             .row(SettingsRow::new(word("et.terminal.copy_on_select")).control(copy))
             .row(
@@ -140,6 +145,11 @@ impl SettingsWindow {
                     .control(menu),
             )
             .row(
+                SettingsRow::new(word("et.terminal.files_menu"))
+                    .description(word("et.terminal.files_menu_hint"))
+                    .control(files_menu),
+            )
+            .row(
                 SettingsRow::new(word("et.terminal.ely"))
                     .description(word("et.terminal.ely_hint"))
                     .control(ely),
@@ -150,9 +160,18 @@ impl SettingsWindow {
                     .control(auto_check(&this, settings.check_updates)),
             )
             .row(updates_row(cx));
+        #[cfg(windows)]
+        let section = section.row(super::explorer::row(&cx.entity(), cx));
         let keys = SettingsSection::new(word("et.terminal.shortcuts"))
             .row(KeyboardShortcutsList::new(shortcuts(cx), &self.search));
-        div().flex().flex_col().gap_6().child(section).child(keys)
+        let profiles = self.profiles_section(cx);
+        div()
+            .flex()
+            .flex_col()
+            .gap_6()
+            .child(section)
+            .child(profiles)
+            .child(keys)
     }
 }
 
@@ -210,7 +229,7 @@ fn updates_row(cx: &App) -> SettingsRow {
 }
 
 /// Hands Browse's pick for `field` to the window.
-fn chosen(
+pub(super) fn chosen(
     this: &Entity<SettingsWindow>,
     field: &'static str,
 ) -> impl Fn(PathBuf, &mut Window, &mut App) + 'static {
@@ -219,7 +238,7 @@ fn chosen(
 }
 
 /// A path field, with why its text is not saved.
-fn path_field(path: PathInput, refused: Option<SharedString>, cx: &App) -> Div {
+pub(super) fn path_field(path: PathInput, refused: Option<SharedString>, cx: &App) -> Div {
     let refused = refused.map(|why| InlineMessage::new(Severity::Danger, why));
     let field = div().w(cx.theme().prose_width()).flex().flex_col().gap_1();
     field.child(path).children(refused)

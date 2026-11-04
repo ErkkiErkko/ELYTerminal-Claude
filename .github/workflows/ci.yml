@@ -51,6 +51,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Path dist/licenses -Force | Out-Null
           Copy-Item target/release/elyterminal.exe dist/ELYTerminal-Claude.exe
+          Copy-Item target/release/conpty.dll,target/release/OpenConsole.exe dist/
+          Copy-Item vendor/conpty/LICENSE dist/licenses/ConPTY-MIT.txt
           Copy-Item LICENSE dist/licenses/ELYTerminal-MIT.txt
           Copy-Item LICENSE-GHOSTTY dist/licenses/Ghostty-MIT.txt
           Copy-Item assets/themes/LICENSE dist/licenses/Themes-MIT.txt

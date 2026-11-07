@@ -3,17 +3,15 @@ use std::time::Instant;
 use ely_gpui_component::{
     buttons::{ButtonVariant, IconButton},
     i18n::text,
-    lists::List,
-    motion::Reorder,
     primitives::{FocusScope, IconName},
     shell::{ColumnShell, ResizeBorder, ShellColumn},
-    theme::ControlSize,
+    theme::{ActiveTheme, ControlSize},
     typography::Caption,
 };
 use gpui::{
-    Action, AnyElement, App, AppContext, Context, Entity, FocusHandle, Focusable,
-    InteractiveElement, IntoElement, KeyBinding, ParentElement, Render, StatefulInteractiveElement,
-    StyleRefinement, Styled, Subscription, Task, Window, actions, div, prelude::FluentBuilder,
+    Action, App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement,
+    IntoElement, KeyBinding, ParentElement, Render, StatefulInteractiveElement, StyleRefinement,
+    Styled, Subscription, Task, Window, actions, div, prelude::FluentBuilder,
 };
 
 use crate::{
@@ -33,6 +31,7 @@ mod rename;
 mod reorder;
 mod session;
 mod toggles;
+mod wallpaper;
 mod widths;
 
 use toggles::column_toggle;
@@ -313,7 +312,8 @@ impl Render for Workspace {
         self.background.fit(window);
         let now = Instant::now();
         self.tick(now, cx);
-        let settings = SettingsStore::get(cx);
+        let settings = SettingsStore::get(cx).clone();
+        let base = cx.theme().colors.bg;
         let workspace = cx.entity();
         // It leads the first column or ends the last.
         let left = column_toggle(
@@ -357,37 +357,15 @@ impl Render for Workspace {
             .map(|session| session.terminal.clone());
         let mut terminal = ShellColumn::new("terminal")
             .title(self.title().to_string())
-            .children(shown);
+            .child(
+                div()
+                    .relative()
+                    .size_full()
+                    .children(shown)
+                    .child(wallpaper::ruler()),
+            );
         if settings.show_sessions {
-            let home = dirs::home_dir();
-            let rows: Vec<(String, AnyElement)> = self
-                .sessions
-                .iter()
-                .enumerate()
-                .map(|(index, session)| {
-                    let active = index == self.active;
-                    let pid = session.terminal.read(cx).pid();
-                    let row =
-                        sessions::row(&workspace, index, session, active, home.as_deref(), now, cx);
-                    (pid.to_string(), row.into_any_element())
-                })
-                .collect();
-            // Only a drag needs Reorder; List keeps its own gap.
-            let list = if settings.drag_sessions {
-                let dragged = workspace.clone();
-                rows.into_iter()
-                    .fold(
-                        Reorder::new("session-rows").on_reorder(move |from, to, _, cx| {
-                            dragged.update(cx, |this, cx| this.reorder(from, to, cx))
-                        }),
-                        |list, (key, row)| list.row(key, div().pb_0p5().child(row)),
-                    )
-                    .into_any_element()
-            } else {
-                List::new()
-                    .children(rows.into_iter().map(|(_, row)| row))
-                    .into_any_element()
-            };
+            let list = self.session_list(settings.drag_sessions, now, cx);
             let new = IconButton::new("new-session", IconName::Plus)
                 .variant(ButtonVariant::Ghost)
                 .size(ControlSize::Sm)
@@ -487,7 +465,15 @@ impl Render for Workspace {
             .child(
                 ResizeBorder::new()
                     .when(self.background.see_through(), ResizeBorder::glass)
-                    .child(FocusScope::new(&self.focus).root().size_full().child(shell)),
+                    .child(
+                        FocusScope::new(&self.focus).root().size_full().child(
+                            div()
+                                .relative()
+                                .size_full()
+                                .children(wallpaper::paint(&settings, base, window, cx))
+                                .child(shell),
+                        ),
+                    ),
             )
     }
 }

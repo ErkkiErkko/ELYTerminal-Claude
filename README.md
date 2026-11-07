@@ -22,7 +22,7 @@
 
 发布页也提供源码包、相对上游的补丁和 `SHA256SUMS.txt` 校验文件。便携压缩包包含项目及第三方许可证。
 
-本定制版已在本机 Windows x64 环境中完成 Release 构建、416 项 Rust 测试、格式与 clippy 检查、启动检查和内嵌图标核对。启动检查以隐藏窗口运行，确认角色与 PowerShell 提示符正常加载。
+本定制版已在本机 Windows x64 环境中完成 Release 构建、448 项 Rust 测试、格式与 clippy 检查、启动检查和内嵌图标核对。启动检查以隐藏窗口运行，确认角色与 PowerShell 提示符正常加载。
 
 源码保留了 macOS 和 Linux 支持，但本定制版尚未在这两个平台验证，也未提供对应的定制安装包。上游发布的安装包仍使用原版 Ely 形象。
 
@@ -34,6 +34,13 @@
 - **应用图标：**使用同一 Claude 形象抱着终端的构图。Windows exe 内嵌 16、24、32、48、64、128、256 像素七种透明背景图标。
 - **Windows 修复：**延后角色窗口的边框刷新，修复初始化时同步回调导致的借用错误，并补充回归验证。
 - **设置兼容：**显示名称改为 Claude，原来的 `ely` 配置键继续有效。
+
+## 0.2.3 更新
+
+- **背景图片：**可覆盖终端列或标题栏下的整个窗口，并设置尺寸、位置和重复方式；背景不透明度可降至 0%。
+- **复制与粘贴：**Windows 默认支持右键复制选区、无选区时粘贴，可在设置中关闭；剪贴板只有图片时，也会通知支持括号粘贴的程序读取图片。
+- **鼠标与链接：**修复 Windows 程序中的滚轮速度，打字时鼠标指针保持隐藏直至移动；悬停链接显示下划线，并限制长链接检测的工作量。
+- **显示与构建：**改善缩放下的框线和下划线粗细；加入 Windows ARM64 自动构建，产物保存在 Actions，本发布页继续提供经本机验证的 x64 包。
 
 ## 0.2.2 更新（含 0.2.0 与 0.2.1）
 
@@ -145,7 +152,7 @@ sudo apt-get install pkg-config libwayland-dev libxkbcommon-dev libxkbcommon-x11
 | `scripts/linux-packages.sh` | 在 Ubuntu 22.04 容器中构建 tar.gz、DEB、RPM 和 AppImage |
 | `scripts/linux-tar.sh` | 单独构建 Linux tar.gz 包 |
 
-这些脚本沿用上游的产物命名方式；Linux 包版本将 `0.2.2-claude.1` 写为 `0.2.2.claude.1`，兼容各格式。详见 [Linux 打包说明](packaging/linux/README.md)。macOS 和 Linux 定制产物尚未验证。
+这些脚本沿用上游的产物命名方式；Linux 包版本将 `0.2.3-claude.1` 写为 `0.2.3.claude.1`，兼容各格式。详见 [Linux 打包说明](packaging/linux/README.md)。macOS 和 Linux 定制产物尚未验证。
 
 ### 日志
 
@@ -178,7 +185,7 @@ $env:RUST_LOG = "elyterminal=debug,ely_gpui_component=info"
 
 ## 上游与许可证
 
-本定制版基于上游 `0.2.2` 及其后续提交，基准提交为 `ba664ef6ef0cdfcb35dc6b65d538cc58e7ecd313`，保留了上游提交历史和版权声明。
+本定制版基于上游 `0.2.3` 及其后续提交，基准提交为 `fdca49aca4400467ed08bd8d873f82348de797a3`，保留了上游提交历史和版权声明。
 
 **本定制版及新增代码继续使用 MIT 许可证**，详见 [LICENSE](LICENSE)。第三方代码和资源继续遵循各自许可证：
 

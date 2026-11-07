@@ -181,6 +181,6 @@ automatically.
 
 ## Claude fork versions
 
-This fork maps Cargo version `0.2.2-claude.1` to package version
-`0.2.2.claude.1` for all four Linux formats. The executable retains its
+This fork maps Cargo version `0.2.3-claude.1` to package version
+`0.2.3.claude.1` for all four Linux formats. The executable retains its
 Cargo version and checks the Claude repository for updates.

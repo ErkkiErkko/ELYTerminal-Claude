@@ -1,4 +1,5 @@
 # windows-zip.ps1: the release build with icon and ConPTY, zipped.
+$ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..') -ErrorAction Stop
 cargo build --release --locked
 if ($LASTEXITCODE -ne 0) { throw "windows-zip: cargo build failed" }
@@ -11,5 +12,12 @@ $out = Join-Path $target 'release'
 $zip = Join-Path $out "ELYTerminal-$version-windows-$arch.zip"
 Copy-Item 'vendor/conpty/LICENSE' (Join-Path $out 'LICENSE-conpty') -ErrorAction Stop
 $files = 'elyterminal.exe', 'conpty.dll', 'OpenConsole.exe', 'LICENSE-conpty' | ForEach-Object { Join-Path $out $_ }
+$licenses = Join-Path $out 'licenses'
+New-Item -ItemType Directory -Path $licenses -Force | Out-Null
+Copy-Item LICENSE (Join-Path $licenses 'ELYTerminal-MIT.txt')
+Copy-Item LICENSE-GHOSTTY (Join-Path $licenses 'Ghostty-MIT.txt')
+Copy-Item assets/themes/LICENSE (Join-Path $licenses 'Themes-MIT.txt')
+Copy-Item assets/fonts/*LICENSE.txt $licenses
+$files += $licenses
 Compress-Archive -Force -Path $files -DestinationPath $zip -ErrorAction Stop
 Write-Output "windows-zip: $zip"
